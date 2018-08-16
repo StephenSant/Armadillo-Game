@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -12,10 +13,14 @@ public class PlayerController : MonoBehaviour
     public float airSpeed= 2;
     public float groundSpeed =5;
     public Rigidbody rb;
+    public float timer;
+    public float maxTime = 3;
+    public float coolDown = 1;
     private bool isGrounded = false;
     private GameObject ballForm;
     private Vector3 spawnPoint;
     private bool isBall;
+    public Slider dashBar;
     #endregion
 
     // Use this for initialization
@@ -27,7 +32,6 @@ public class PlayerController : MonoBehaviour
         spawnPoint = transform.position;
         ballForm.active = false;
 
-        
     }
 
     // Update is called once per frame
@@ -43,7 +47,7 @@ public class PlayerController : MonoBehaviour
             }
             if (moveVol.x == 0 && moveVol.z == 0)
             {
-                Quaternion.LookRotation(new Vector3(transform.rotation.x, 0, transform.rotation.z));
+                Quaternion.LookRotation(new Vector3(1, 0, 1));
             }
             else
             {
@@ -54,19 +58,36 @@ public class PlayerController : MonoBehaviour
         if (Physics.Raycast(ballForm.transform.position, transform.TransformDirection(new Vector3(0, -1, 0)), 1.1f))
         {
             isGrounded = true;
-            moveSpeed = groundSpeed;
-            
+            if (isBall)
+            {
+                moveSpeed = groundSpeed * multpySpeed;
+            }
+            else
+            {
+                moveSpeed = groundSpeed / multpySpeed;
+            }
+
+
         }
         else
         {
             isGrounded = false;
-            moveSpeed = airSpeed;
+            if (isBall)
+            {
+                moveSpeed = airSpeed * multpySpeed;
+            }
+            else
+            {
+                moveSpeed = airSpeed / multpySpeed;
+            }
         }
         #endregion
         #region Ball mode
-        if (Input.GetKeyDown(KeyCode.Mouse0))
+        if (Input.GetKey(KeyCode.Mouse0) && timer <= -coolDown)
         {
             IsBall();
+            timer = maxTime;
+            
         }
         if (Input.GetKeyUp(KeyCode.Mouse0))
         {
@@ -77,10 +98,29 @@ public class PlayerController : MonoBehaviour
             isBall = false;
         }
         #endregion
+        #region Respawn
         if (transform.position.y < -10)
         {
-            transform.position = spawnPoint;
+            Die();
         }
+        #endregion
+        #region Timer
+        if (timer <= 0)
+        {
+            moveSpeed /= multpySpeed;
+            ballForm.active = false;
+            GetComponent<MeshRenderer>().enabled = true;
+            GetComponent<CapsuleCollider>().enabled = true;
+            isBall = false;
+        }
+        timer -= Time.deltaTime;
+        if(timer <= -1)
+        {
+            timer = -1;
+        }
+        #endregion
+        dashBar.GetComponent<Slider>().value = timer;
+        
     }
 
     void IsBall()
@@ -90,6 +130,17 @@ public class PlayerController : MonoBehaviour
         GetComponent<MeshRenderer>().enabled = false;
         GetComponent<CapsuleCollider>().enabled = false;
         isBall = true;
+        
     }
-
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.tag == "Enemy")
+        {
+            Die();
+        }
+    }
+    void Die()
+    {
+        transform.position = spawnPoint;
+    }
 }
